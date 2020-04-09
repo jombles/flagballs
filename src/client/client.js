@@ -13,6 +13,7 @@ function getCookie(name) {
   // Split cookie string and get all individual name=value pairs in an array
   var cookieArr = document.cookie.split(";");
 
+  console.log(cookieArr);
   // Loop through the array elements
   for (var i = 0; i < cookieArr.length; i++) {
     var cookiePair = cookieArr[i].split("=");
@@ -31,7 +32,9 @@ function getCookie(name) {
 
 socket.on("storeID", function(data) {
   localID = data;
-  document.cookie += ";rollerballID=" + data;
+  //document.cookie = "rollerballID=1; path=/";
+  document.cookie = "rollerballID=" + data;
+  console.log(document.cookie);
 });
 
 joinButton.onclick = function(e) {
@@ -55,9 +58,11 @@ if (localID) {
   console.log("no ID stored");
   socket.emit("newPlayer");
 }
+
 socket.on("noIDmatch", function(data) {
-  //console.log("repeatedly running noIDmatch");
-  document.cookie += ";rollerballID=" + data;
+  console.log("repeatedly running noIDmatch");
+  document.cookie = "rollerballID=" + data;
+  //document.cookie += ";rollerballID=" + 1 + "; path=/";
   socket.emit("newPlayer");
 });
 
@@ -235,13 +240,20 @@ socket.on("state", function(
   win,
   p1,
   p2,
+  p3,
+  p4,
   timer,
   gameOn
 ) {
   drawLevel(score);
   for (var id in players) {
     var player = players[id];
-    if (player.id === p1 || player.id === p2) {
+    if (
+      player.id === p1 ||
+      player.id === p2 ||
+      player.id === p3 ||
+      player.id === p4
+    ) {
       drawPlayer(player);
       for (var fid in flags) {
         var flag = flags[fid];

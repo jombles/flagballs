@@ -36,14 +36,19 @@ var timer = -1;
 var spells = {
   ridge: "ridge"
 };
+
+var speedMode = true;
+
 var activeSpells = {};
 var rechargeSpeed = 3;
 var ridgeTime = 6;
 var spellIndex = 0;
-var maxPlayers = 2;
+var fourPlayer = true;
 var playerCount = 0;
 var player1 = {};
 var player2 = {};
+var player3 = {};
+var player4 = {};
 var lobbyCount = 0;
 var goalWidth = 120;
 var winScore = 15;
@@ -99,14 +104,17 @@ io.on("connection", function(socket) {
   };
   socket.on("checkID", function(data) {
     console.log("checking");
+
     for (var child in abandonedChildren) {
-      if (child.sessionID === data) {
-        sessionID = child.sessionID;
-        console.log("id match");
+      console.log("sessionID: " + abandonedChildren[child].id);
+      console.log("data: " + data);
+      if (abandonedChildren[child].id === data) {
+        sessionID = abandonedChildren[child].id;
         socket.emit("playerRole", players[sessionID]);
         break;
       }
     }
+
     console.log("checkingggg");
     console.log("no id match");
     socket.emit("noIDmatch", sessionID);
@@ -166,8 +174,11 @@ io.on("connection", function(socket) {
       player1.playing = true;
       player1.team = 0;
       player1.x = 75;
-      player1.puck.x = 925;
+      player1.puck.x = 75;
       player1.spawnX = 75;
+      player1.y = 200;
+      player1.puck.x = 200;
+      player1.spawnX = 200;
       socket.emit("setTeam", 0);
       playerCount++;
       //console.log("player1 has entered");
@@ -175,10 +186,43 @@ io.on("connection", function(socket) {
     if (playerCount === 1 && !player.playing) {
       player2 = player;
       player2.playing = true;
-      player2.team = 1;
-      player2.x = 925;
-      player2.puck.x = 925;
-      player2.spawnX = 925;
+      player2.team = 0;
+      player2.x = 75;
+      player2.puck.x = 75;
+      player2.spawnX = 75;
+      player2.y = 300;
+      player2.puck.y = 300;
+      player2.spawnY = 300;
+
+      socket.emit("setTeam", 0);
+      playerCount++;
+      console.log("player2 has entered");
+    }
+    if (playerCount === 2 && !player.playing) {
+      player3 = player;
+      player3.playing = true;
+      player3.team = 1;
+      player3.x = 925;
+      player3.puck.x = 925;
+      player3.spawnX = 925;
+      player3.y = 200;
+      player3.puck.y = 200;
+      player3.spawnY = 200;
+
+      socket.emit("setTeam", 1);
+      playerCount++;
+      console.log("player2 has entered");
+    }
+    if (playerCount === 3 && !player.playing) {
+      player4 = player;
+      player4.playing = true;
+      player4.team = 1;
+      player4.x = 925;
+      player4.puck.x = 925;
+      player4.spawnX = 925;
+      player4.y = 300;
+      player4.puck.y = 300;
+      player4.spawnY = 300;
 
       socket.emit("setTeam", 1);
       playerCount++;
@@ -190,16 +234,33 @@ io.on("connection", function(socket) {
     if (player.team !== -1) {
       player.ready = true;
     }
-    if (player1.ready && player2.ready && !gameOn) {
+    if (speedMode) {
+      gameOn = true;
+    }
+    if (
+      player1.ready &&
+      player2.ready &&
+      player3.ready &&
+      player4.ready &&
+      !gameOn
+    ) {
       timer = 3;
       player1.x = player1.spawnX;
       player1.y = player1.spawnY;
       player2.x = player2.spawnX;
       player2.y = player2.spawnY;
+      player3.x = player3.spawnX;
+      player3.y = player3.spawnY;
+      player4.x = player4.spawnX;
+      player4.y = player4.spawnY;
       player1.puck.x = player1.spawnX;
       player1.puck.y = player1.spawnY;
       player2.puck.x = player2.spawnX;
       player2.puck.y = player2.spawnY;
+      player3.puck.x = player3.spawnX;
+      player3.puck.y = player3.spawnY;
+      player4.puck.x = player4.spawnX;
+      player4.puck.y = player4.spawnY;
 
       var countdown = setInterval(function() {
         timer--;
@@ -300,7 +361,7 @@ function drawRidge(player, data) {
 function createPlayerLoop(player) {
   var lastUpdateTime = new Date().getTime();
   setInterval(function() {
-    if (!gameOn) {
+    if (!gameOn || !player.playing) {
       lastUpdateTime = new Date().getTime();
       return;
     }
@@ -335,7 +396,7 @@ setInterval(function() {
       continue;
     }
     if (win === -1) {
-      if (player.id === player1.id) {
+      if (player.id === player1.id || player.id === player2.id) {
         if (
           Math.abs(player.x - flags[1].x) < 23 &&
           Math.abs(player.y - flags[1].y) < 23
@@ -352,7 +413,7 @@ setInterval(function() {
             win = 0;
           }
         }
-      } else if (player.id === player2.id) {
+      } else if (player.id === player3.id || player.id === player4.id) {
         if (
           Math.abs(player.x - flags[0].x) < 23 &&
           Math.abs(player.y - flags[0].y) < 23
@@ -384,7 +445,12 @@ setInterval(function() {
     score[1] = 0;
     for (var id in players) {
       var player = players[id];
-      if (player.id === player1.id || player.id === player2.id) {
+      if (
+        player.id === player1.id ||
+        player.id === player2.id ||
+        player.id === player3.id ||
+        player.id === player4.id
+      ) {
         player.playing = false;
         player.team = -1;
         player.flagging = false;
@@ -420,6 +486,8 @@ setInterval(function() {
     win,
     player1.id,
     player2.id,
+    player3.id,
+    player4.id,
     timer,
     gameOn
   );

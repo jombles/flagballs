@@ -26,7 +26,8 @@ class Puck {
     this.boosted = false;
     this.boosting = false;
     this.fullBoostLoops = 0;
-    this.maxSpeedMod = 6.0;
+    this.maxSpeedMod = 6;
+    this.globalSpeedMod = 1.0;
   }
 
   calculateForce(d, timeDifference) {
@@ -63,9 +64,6 @@ class Puck {
 
     this.sy += (yChange * accelMod) / 2.5;
     this.sx += (xChange * accelMod) / 2.5;
-    if (this.boosting) {
-      this.maxSpeedMod = 14;
-    }
     if (this.sx > this.maxSpeedMod) {
       this.sx = this.maxSpeedMod;
     }
@@ -146,10 +144,10 @@ class Puck {
       }
     }
     if (this.xa > 0.35 || this.xa < -0.35) {
-      this.x += this.xa;
+      this.x += this.xa * this.globalSpeedMod;
     }
     if (this.ya > 0.35 || this.ya < -0.35) {
-      this.y += this.ya;
+      this.y += this.ya * this.globalSpeedMod;
     }
   }
 
