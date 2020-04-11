@@ -4,16 +4,22 @@ if (!!navigator.getGamepads) {
   //console.log("GAMEPAD FUNCTIONALITY");
 }
 
-var gamepads = navigator.getGamepads();
+window.activeGamepadNum = 0;
 
+$("#gamepad_select").on("change", function(e) {
+  window.activeGamepadNum = e.target.value;
+});
+
+var numGamepads = 0;
 window.addEventListener("gamepadconnected", function(e) {
-  console.log(
-    "Gamepad connected at index %d: %s. %d buttons, %d axes.",
-    e.gamepad.index,
-    e.gamepad.id,
-    e.gamepad.buttons.length,
-    e.gamepad.axes.length
-  );
+  var placeholder = document.getElementById("gamepad_placeholder");
+  var gamepadSelect = document.getElementById("gamepad_select");
+  var optionNode = document.createElement("option");
+  var textnode = document.createTextNode(e.gamepad.id);
+  optionNode.setAttribute("value", numGamepads++);
+  optionNode.appendChild(textnode);
+  gamepadSelect.appendChild(optionNode);
+  gamepadSelect.removeChild(placeholder);
 });
 
 var controllerToggle = true;
@@ -246,7 +252,7 @@ document.addEventListener("keyup", function(event) {
 
 setInterval(function() {
   if (controllerToggle) {
-    var gamepad = navigator.getGamepads()[0];
+    var gamepad = navigator.getGamepads()[window.activeGamepadNum];
     if (gamepad) {
       //console.log("{x: " + gamepad.axes[2] + " ,y: " + gamepad.axes[5] + "}");
     }
