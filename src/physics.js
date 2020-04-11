@@ -1,3 +1,14 @@
+var dots = [
+  [0, -100],
+  [70.071, -70.071],
+  [100, 0],
+  [70.071, 70.071],
+  [0, 100],
+  [-70.071, 70.071],
+  [-100, 0],
+  [-70.071, -70.071]
+];
+
 class Puck {
   constructor(startingX, startingY) {
     this.levelSizeX = 1000;
@@ -14,6 +25,10 @@ class Puck {
     this.sy = 0.0;
     this.d = 0.0;
     this.m = 2;
+    this.hX = startingX + 10;
+    this.hY = startingY;
+    this.prevX = startingX + 9;
+    this.prevY = startingY - 1;
     this.aon = false;
     this.won = false;
     this.don = false;
@@ -193,6 +208,8 @@ class Puck {
         this.sy = this.sy / 1.2;
       }
     }
+    this.prevX = this.x;
+    this.prevY = this.y;
     if (this.xa > 0.35 || this.xa < -0.35) {
       if (this.controllerEnabled) {
         this.xd = this.xa * this.globalSpeedMod * this.controllerDist;
@@ -210,6 +227,88 @@ class Puck {
         this.yd = this.ya * this.globalSpeedMod;
         this.y += this.yd;
       }
+    }
+  }
+
+  checkAnalogRidgeCollisions2(activeSpells) {
+    for (var id in activeSpells) {
+      var spell = activeSpells[id];
+      var x1 = spell.x1;
+      var x2 = spell.x2;
+      var x3 = spell.x3;
+      var x4 = spell.x4;
+      var y1 = spell.y1;
+      var y2 = spell.y2;
+      var y3 = spell.y3;
+      var y4 = spell.y4;
+      if (spell.angle < 270 && spell.angle >= 180) {
+        x1 = spell.x3;
+        x2 = spell.x1;
+        x3 = spell.x4;
+        x4 = spell.x2;
+        y1 = spell.y3;
+        y2 = spell.y1;
+        y3 = spell.y4;
+        y4 = spell.y2;
+      } else if (spell.angle < 180 && spell.angle >= 90) {
+        x1 = spell.x4;
+        x2 = spell.x3;
+        x3 = spell.x2;
+        x4 = spell.x1;
+        y1 = spell.y4;
+        y2 = spell.y3;
+        y3 = spell.y2;
+        y4 = spell.y1;
+      } else if (spell.angle < 90 && spell.angle >= 0) {
+        x1 = spell.x2;
+        x2 = spell.x4;
+        x3 = spell.x1;
+        x4 = spell.x3;
+        y1 = spell.y2;
+        y2 = spell.y4;
+        y3 = spell.y1;
+        y4 = spell.y3;
+      }
+      var lineCoords = [[x1, y1], [x2, y2], [x3, y3], [x4, y4]];
+      /*if (
+        this.x + 22 > x1 &&
+        this.x - 22 < x4 &&
+        (this.y - 22 < y2 && this.y + 22 > y3)
+      ) {*/
+      for (var i = 0; i < lineCoords.length; i++) {
+        var dx = dots[i][0];
+        var dy = dots[i][1];
+        for (var j = 0; j < lineCoords.length; j++) {
+          var p = lineCoords[j][0];
+          var q = lineCoords[j][1];
+          var r = lineCoords[(j + 1) % 4][0];
+          var s = lineCoords[(j + 1) % 4][1];
+          var a = this.prevX + dx;
+          var b = this.prevY + dy;
+          var c = this.x + dx;
+          var d = this.y + dy;
+          //console.log("a: " + a);
+          //console.log("b: " + b);
+          //console.log("c: " + c);
+          //console.log("d: " + d);
+          //console.log("p: " + p);
+          //console.log("q: " + q);
+          //console.log("r: " + r);
+          //console.log("s: " + s);
+          var det, gamma, lambda;
+          det = (c - a) * (s - q) - (r - p) * (d - b);
+          if (det === 0) {
+            return false;
+          } else {
+            lambda = ((s - q) * (r - a) + (p - r) * (s - b)) / det;
+            gamma = ((b - d) * (r - a) + (c - a) * (s - b)) / det;
+            if (0 < lambda && lambda < 1 && (0 < gamma && gamma < 1)) {
+              console.log("det: " + det);
+            }
+          }
+        }
+      }
+      /*}*/
     }
   }
 
@@ -365,17 +464,23 @@ class Puck {
           }
           //console.log("wall ang: " + angleTemp);
           //console.log((angle * 180) / Math.PI);
+          //console.log(this.x - (x1 + xLoc1));
+          //console.log(this.y - (y1 + yLoc1));
+          //console.log(angleTemp);
+          if (angleTemp < 85 || angleTemp > 5) {
+            console.log("angled wall");
+          }
           if (
             this.x - (x1 + xLoc1) < 10 &&
             this.y - (y1 + yLoc1) < 10 &&
             this.x - (x1 + xLoc1) > -22 &&
             this.y - (y1 + yLoc1) > -22
           ) {
-            console.log("x: " + 10 * Math.sin(rCAngle));
-            console.log("y: " + 10 * Math.cos(rCAngle));
+            //console.log("x: " + 10 * Math.sin(rCAngle));
+            //console.log("y: " + 10 * Math.cos(rCAngle));
             this.x += 6 * Math.cos(rCAngle);
             this.y -= 6 * Math.sin(rCAngle);
-            console.log("we got a hit from ab0ve");
+            //console.log("we got a hit from ab0ve");
             var finalAngle = rAngle + (rAngle - angle);
             if (finalAngle >= Math.PI) {
               finalAngle -= 2 * Math.PI;
@@ -393,8 +498,8 @@ class Puck {
             this.x - (x2 + xLoc2) < 22 &&
             this.y - (y2 + yLoc2) < 22
           ) {
-            console.log("x: " + 10 * Math.sin(rCAngle));
-            console.log("y: " + 10 * Math.cos(rCAngle));
+            //console.log("x: " + 10 * Math.sin(rCAngle));
+            //console.log("y: " + 10 * Math.cos(rCAngle));
             this.x -= 6 * Math.cos(rCAngle);
             this.y += 6 * Math.sin(rCAngle);
             var finalAngle = rAngle + (rAngle - angle);
@@ -417,8 +522,8 @@ class Puck {
             var changer = rAngle;
             rAngle = rCAngle;
             rCAngle = changer;
-            console.log("x: " + 10 * Math.cos(rCAngle));
-            console.log("y: " + 10 * Math.sin(rCAngle));
+            //console.log("x: " + 10 * Math.cos(rCAngle));
+            //console.log("y: " + 10 * Math.sin(rCAngle));
             this.x -= 6 * Math.cos(rCAngle);
             this.y += 6 * Math.sin(rCAngle);
             var finalAngle = rAngle + (rAngle - angle);
@@ -441,8 +546,8 @@ class Puck {
             var changer = rAngle;
             rAngle = rCAngle;
             rCAngle = changer;
-            console.log("x: " + 10 * Math.cos(rCAngle));
-            console.log("y: " + 10 * Math.sin(rCAngle));
+            //console.log("x: " + 10 * Math.cos(rCAngle));
+            //console.log("y: " + 10 * Math.sin(rCAngle));
             this.x += 6 * Math.cos(rCAngle);
             this.y -= 6 * Math.sin(rCAngle);
             var finalAngle = rAngle + (rAngle - angle);

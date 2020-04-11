@@ -1965,6 +1965,11 @@ safe-regex@^1.1.0:
   version "2.1.2"
   resolved "https://registry.yarnpkg.com/safer-buffer/-/safer-buffer-2.1.2.tgz#44fa161b0187b9549dd84bb91802f9bd8385cd6a"
 
+sat@0.8.0:
+  version "0.8.0"
+  resolved "https://registry.yarnpkg.com/sat/-/sat-0.8.0.tgz#eae1e36c96551f7b2fb884eee8ffb4d0e895a667"
+  integrity sha512-W0iWln+43pb+74lxcYW24BrueFMMefdqHvHxGQ/W0NemnyBXrV0oE23kGNjPRgwIoTuodYIH3ul2jqLrf4VGSA==
+
 sax@^1.2.4:
   version "1.2.4"
   resolved "https://registry.yarnpkg.com/sax/-/sax-1.2.4.tgz#2816234e2378bddc4e5354fab5caa895df7100d9"

@@ -11,6 +11,7 @@
     "jquery": "3.4.1",
     "lodash": "4.17.15",
     "pixi.js": "5.2.1",
+    "sat": "0.8.0",
     "socket.io": "2.3.0"
   },
   "devDependencies": {

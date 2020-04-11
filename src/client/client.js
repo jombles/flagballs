@@ -6,6 +6,16 @@ if (!!navigator.getGamepads) {
 
 var gamepads = navigator.getGamepads();
 
+window.addEventListener("gamepadconnected", function(e) {
+  console.log(
+    "Gamepad connected at index %d: %s. %d buttons, %d axes.",
+    e.gamepad.index,
+    e.gamepad.id,
+    e.gamepad.buttons.length,
+    e.gamepad.axes.length
+  );
+});
+
 var controllerToggle = true;
 
 var chatText = document.getElementById("chat-text");
@@ -237,6 +247,9 @@ document.addEventListener("keyup", function(event) {
 setInterval(function() {
   if (controllerToggle) {
     var gamepad = navigator.getGamepads()[0];
+    if (gamepad) {
+      //console.log("{x: " + gamepad.axes[2] + " ,y: " + gamepad.axes[5] + "}");
+    }
     input.leftStick = gamepad.axes.slice(0, 2);
     input.rightStick = gamepad.axes.slice(2);
     if (gamepad.buttons[6].value > 0.5) {

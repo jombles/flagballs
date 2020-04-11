@@ -458,7 +458,7 @@ function createPlayerLoop(player) {
     //var hypSize = puck.controllerX * puck.controllerX + puck.controllerY * puck.controllerY;
     //var angle = radAngle * (180 / Math.PI) + 180;
     puck.checkRidgeCollisions(activeSpells);
-    puck.checkAnalogRidgeCollisions(activeAnalogSpells);
+    puck.checkAnalogRidgeCollisions2(activeAnalogSpells);
 
     player.x = puck.x;
     player.y = puck.y;
