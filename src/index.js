@@ -23,7 +23,8 @@ Object.keys(io.sockets.sockets).forEach(function(s) {
 });
 
 var ridge = {
-  length: 230
+  length: 220,
+  width: 20
 };
 
 var players = {};
@@ -34,15 +35,20 @@ var levelSizeY = 550;
 var puckSize = 10;
 var timer = -1;
 var spells = {
-  ridge: "ridge"
+  ridge: "ridge",
+  analogRidge: "analogRidge"
 };
 
 var speedMode = true;
 
 var activeSpells = {};
+var activeAnalogSpells = {};
+var ridgeXDist = Math.sqrt(25 * 25 + 10 * 10);
+var ridgeXAngle = Math.atan(10 / 25);
 var rechargeSpeed = 3;
-var ridgeTime = 6;
+var ridgeTime = 36;
 var spellIndex = 0;
+var analogSpellIndex = 0;
 var fourPlayer = true;
 var playerCount = 0;
 var player1 = {};
@@ -97,7 +103,6 @@ var ID = function() {
 };
 
 io.on("connection", function(socket) {
-  console.log("my id: " + socket.id);
   var sessionID = ID();
   players[sessionID] = {
     puck: new Puck()
@@ -157,7 +162,7 @@ io.on("connection", function(socket) {
       dclick: false,
       canBoost: true,
       holdingDownSpaceCheck: false,
-      spell: "ridge",
+      spell: "analogRidge",
       recharge: false,
       puck: new Puck(startingX, startingY)
     };
@@ -272,6 +277,28 @@ io.on("connection", function(socket) {
       }, 1000);
     }
   });
+  socket.on("controllerMovement", function(input) {
+    var player = players[sessionID] || {};
+    if (player.playing && gameOn) {
+      //console.log(input.leftStick[0]);
+      var puck = player.puck;
+      puck.controllerEnabled = true;
+      puck.controllerX = input.leftStick[0];
+      puck.controllerY = input.leftStick[1];
+      puck.braking = input.brake;
+      if (!input.boost) {
+        player.holdingDownSpace = false;
+      }
+      if (player.canBoost && input.boost && !player.holdingDownSpace) {
+        puck.boosted = input.boost;
+        player.holdingDownSpace = true;
+        player.canBoost = false;
+        setTimeout(function() {
+          player.canBoost = true;
+        }, 3000);
+      }
+    }
+  });
   socket.on("movement", function(data) {
     var player = players[sessionID] || {};
     if (player.playing && gameOn) {
@@ -294,8 +321,31 @@ io.on("connection", function(socket) {
       }
     }
   });
+  socket.on("controllerSpell", function(axes) {
+    if (axes[0] * axes[0] + axes[1] * axes[1] > 0.7) {
+      var radAngle = Math.atan2(-axes[1], -axes[0]);
+      var player = players[sessionID] || {};
+      if (player.playing && gameOn) {
+        if (player.recharge) {
+          return;
+        }
+        if (player.spell === "analogRidge") {
+          drawRidgeAnalog(player, radAngle);
+        }
+        player.recharge = true;
+        setTimeout(function() {
+          player.recharge = false;
+        }, rechargeSpeed * 1000);
+      }
+    }
+  });
   socket.on("spell", function(data) {
-    if (!data.left && !data.up && !data.right && !data.down) {
+    if (
+      !data.spellleft &&
+      !data.spellup &&
+      !data.spellright &&
+      !data.spelldown
+    ) {
       return;
     }
     var player = players[sessionID] || {};
@@ -314,8 +364,38 @@ io.on("connection", function(socket) {
   });
 });
 
+function drawRidgeAnalog(player, angle) {
+  var x1Val = player.x + -Math.cos(angle - ridgeXAngle) * ridgeXDist;
+  var x2Val = player.x + -Math.cos(angle + ridgeXAngle) * ridgeXDist;
+  var y1Val = player.y + -Math.sin(angle - ridgeXAngle) * ridgeXDist;
+  var y2Val = player.y + -Math.sin(angle + ridgeXAngle) * ridgeXDist;
+
+  activeAnalogSpells[analogSpellIndex] = {
+    name: "analogRidge",
+    length: ridge.length,
+    width: ridge.width,
+    angle: angle * (180 / Math.PI) + 180,
+    startX: player.y - 10,
+    startY: player.x + 25,
+    x1: x1Val,
+    x2: x2Val,
+    x3: x1Val + -(Math.cos(angle) * ridge.length),
+    x4: x2Val + -(Math.cos(angle) * ridge.length),
+    y1: y1Val,
+    y2: y2Val,
+    y3: y1Val + -(Math.sin(angle) * ridge.length),
+    y4: y2Val + -(Math.sin(angle) * ridge.length),
+    rotateX: player.x,
+    rotateY: player.y,
+    decay: new Date().getTime()
+  };
+  console.log(activeAnalogSpells[analogSpellIndex].angle);
+
+  analogSpellIndex += 1;
+}
+
 function drawRidge(player, data) {
-  if (data.up) {
+  if (data.spellup) {
     activeSpells[spellIndex] = {
       name: "ridge",
       leftX: player.x - 10,
@@ -325,7 +405,7 @@ function drawRidge(player, data) {
       decay: new Date().getTime()
     };
     spellIndex += 1;
-  } else if (data.left) {
+  } else if (data.spellleft) {
     activeSpells[spellIndex] = {
       name: "ridge",
       leftX: player.x - ridge.length,
@@ -335,7 +415,7 @@ function drawRidge(player, data) {
       decay: new Date().getTime()
     };
     spellIndex += 1;
-  } else if (data.right) {
+  } else if (data.spellright) {
     activeSpells[spellIndex] = {
       name: "ridge",
       leftX: player.x + 25,
@@ -368,11 +448,21 @@ function createPlayerLoop(player) {
     var currentTime = new Date().getTime();
     var timeDifference = currentTime - lastUpdateTime;
     var puck = player.puck;
-    puck.updatePosition2(timeDifference);
+    if (puck.controllerEnabled) {
+      puck.updatePositionC(timeDifference);
+    } else {
+      puck.updatePosition2(timeDifference);
+    }
+
+    var radAngle = Math.atan2(-puck.controllerX, -puck.controllerY);
+    //var hypSize = puck.controllerX * puck.controllerX + puck.controllerY * puck.controllerY;
+    //var angle = radAngle * (180 / Math.PI) + 180;
     puck.checkRidgeCollisions(activeSpells);
+    puck.checkAnalogRidgeCollisions(activeAnalogSpells);
 
     player.x = puck.x;
     player.y = puck.y;
+    //console.log(puck.x);
 
     lastUpdateTime = currentTime;
   }, 1000 / 60);
@@ -385,8 +475,16 @@ setInterval(function() {
     if (spell.name === "ridge") {
       var currentTime = new Date().getTime();
       if (currentTime - spell.decay > ridgeTime * 1000) {
-        console.log("deleting spell");
         delete activeSpells[id];
+      }
+    }
+  }
+  for (var aid in activeAnalogSpells) {
+    var aspell = activeAnalogSpells[aid];
+    if (aspell.name === "analogRidge") {
+      var currentTime = new Date().getTime();
+      if (currentTime - aspell.decay > ridgeTime * 1000) {
+        delete activeAnalogSpells[aid];
       }
     }
   }
@@ -479,6 +577,7 @@ setInterval(function() {
     "state",
     players,
     activeSpells,
+    activeAnalogSpells,
     flags,
     goals,
     hasScored,
