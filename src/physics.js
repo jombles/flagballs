@@ -1,12 +1,12 @@
 var dots = [
-  [0, -100],
-  [70.071, -70.071],
-  [100, 0],
-  [70.071, 70.071],
-  [0, 100],
-  [-70.071, 70.071],
-  [-100, 0],
-  [-70.071, -70.071]
+  [0, -25],
+  [17.677, -17.677],
+  [25, 0],
+  [17.677, 17.677],
+  [0, 25],
+  [-17.677, 17.677],
+  [-25, 0],
+  [-17.677, -17.677]
 ];
 
 class Puck {
@@ -275,7 +275,7 @@ class Puck {
         this.x - 22 < x4 &&
         (this.y - 22 < y2 && this.y + 22 > y3)
       ) {*/
-      for (var i = 0; i < lineCoords.length; i++) {
+      for (var i = 0; i < dots.length; i++) {
         var dx = dots[i][0];
         var dy = dots[i][1];
         for (var j = 0; j < lineCoords.length; j++) {
@@ -298,12 +298,33 @@ class Puck {
           var det, gamma, lambda;
           det = (c - a) * (s - q) - (r - p) * (d - b);
           if (det === 0) {
-            return false;
+            console.log("parrallel");
           } else {
             lambda = ((s - q) * (r - a) + (p - r) * (s - b)) / det;
             gamma = ((b - d) * (r - a) + (c - a) * (s - b)) / det;
             if (0 < lambda && lambda < 1 && (0 < gamma && gamma < 1)) {
-              console.log("det: " + det);
+              //console.log("det: " + det);
+              var dey = q - s;
+              var dex = p - r;
+              var theta = Math.atan2(dey, dex);
+              var puckTheta = Math.atan2(this.sy, this.sx);
+              var puckH = Math.sqrt(this.sy * this.sy + this.sx * this.sx);
+              var finalAngle = theta + theta - puckTheta;
+              finalAngle += 2 * 1.57;
+              this.sy = -puckH * Math.sin(finalAngle);
+              this.sx = -puckH * Math.cos(finalAngle);
+              this.y += this.sy * 2;
+              this.x += this.sx * 2;
+              //this.sy = -puckH * Math.sin(finalAngle);
+              //this.sx = -puckH * Math.cos(finalAngle);
+              //var moveX = 26 * Math.sin(theta - 1.5708);
+              //var moveY = -26 * Math.cos(theta - 1.5708);
+              //this.y += moveX;
+              //this.x += moveY;
+              console.log("theta: " + theta);
+              console.log("puckTheta: " + puckTheta);
+              console.log("finalAngle: " + finalAngle);
+              return;
             }
           }
         }
