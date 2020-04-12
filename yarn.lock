@@ -509,6 +509,11 @@ braces@^2.3.0, braces@^2.3.1:
     split-string "^3.0.2"
     to-regex "^3.0.1"
 
+bvh@0.5.0:
+  version "0.5.0"
+  resolved "https://registry.yarnpkg.com/bvh/-/bvh-0.5.0.tgz#afaf1a67a2d8edb583cece7e331f6bb2f12967b0"
+  integrity sha512-AoqXrrBTaCCk+6pZWC33f4UR3jY3yyh7jahZ5pHUPqZ3KSyDfWqlryDrgxq+xsl60PYwZOWRoCFX4+RqN7T6gg==
+
 bytes@3.1.0:
   version "3.1.0"
   resolved "https://registry.yarnpkg.com/bytes/-/bytes-3.1.0.tgz#f6cf7933a360e0588fa9fde85651cdc7f805d1f6"
@@ -764,6 +769,11 @@ destroy@~1.0.4:
   version "1.0.4"
   resolved "https://registry.yarnpkg.com/destroy/-/destroy-1.0.4.tgz#978857442c44749e4206613e37946205826abd80"
   integrity sha1-l4hXRCxEdJ5CBmE+N5RiBYJqvYA=
+
+detect-collisions@2.5.1:
+  version "2.5.1"
+  resolved "https://registry.yarnpkg.com/detect-collisions/-/detect-collisions-2.5.1.tgz#c7ff550f07347ee9ad14be5cc822ed3c5516f819"
+  integrity sha512-2zDQNiVcq+joPhWS0yh7Ig6lHq5hyvSq3z2vInxM14WYBl8UMYMi8T9T4rHbLRNfFZJugMGuSdCPbweorTXDTg==
 
 detect-libc@^1.0.2:
   version "1.0.3"

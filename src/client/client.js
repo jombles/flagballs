@@ -10,6 +10,14 @@ $("#gamepad_select").on("change", function(e) {
   window.activeGamepadNum = e.target.value;
 });
 
+$("#numplayers_select").on("change", function(e) {
+  socket.emit("numPlayersChange", $("#numplayers_select").val());
+});
+
+socket.on("numPlayers", function(numPlayers) {
+  $("#numplayers_select").val(numPlayers);
+});
+
 var numGamepads = 0;
 window.addEventListener("gamepadconnected", function(e) {
   var placeholder = document.getElementById("gamepad_placeholder");
@@ -310,6 +318,7 @@ socket.on("state", function(
 
   for (var id in players) {
     var player = players[id];
+    console.log(player.id);
     if (
       player.id === p1 ||
       player.id === p2 ||

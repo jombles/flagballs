@@ -1,5 +1,11 @@
 //TESTING COMMIT FUNCTIONALITY
 
+//var collisions = require("collisions");
+//
+const { Collisions, Polygon } = require("detect-collisions");
+
+const system = new Collisions();
+
 var express = require("express");
 var app = express();
 
@@ -28,6 +34,7 @@ var ridge = {
 };
 
 var players = {};
+var lobbyMembers = {};
 var speedMultiplier = 300.0;
 var playerSpeed = 2;
 var levelSizeX = 1000;
@@ -49,7 +56,8 @@ var rechargeSpeed = 3;
 var ridgeTime = 36;
 var spellIndex = 0;
 var analogSpellIndex = 0;
-var fourPlayer = true;
+var maxPlayers = -1;
+var maxPlayersNext = -1;
 var playerCount = 0;
 var player1 = {};
 var player2 = {};
@@ -104,9 +112,13 @@ var ID = function() {
 
 io.on("connection", function(socket) {
   var sessionID = ID();
-  players[sessionID] = {
+  lobbyMembers[sessionID] = {
     puck: new Puck()
   };
+  socket.emit("numPlayers", maxPlayersNext.toString());
+  socket.on("numPlayersChange", function(val) {
+    maxPlayersNext = parseInt(val, 10);
+  });
   socket.on("checkID", function(data) {
     console.log("checking");
 
@@ -115,7 +127,7 @@ io.on("connection", function(socket) {
       console.log("data: " + data);
       if (abandonedChildren[child].id === data) {
         sessionID = abandonedChildren[child].id;
-        socket.emit("playerRole", players[sessionID]);
+        socket.emit("playerRole", lobbyMembers[sessionID]);
         break;
       }
     }
@@ -127,8 +139,8 @@ io.on("connection", function(socket) {
   socket.on("disconnect", function() {
     console.log("my id: " + socket.id);
     console.log("someone has left");
-    if (players[sessionID]) {
-      abandonedChildren.push(players[sessionID]);
+    if (lobbyMembers[sessionID]) {
+      abandonedChildren.push(lobbyMembers[sessionID]);
     }
   });
   socket.on("newPlayer", function() {
@@ -137,7 +149,7 @@ io.on("connection", function(socket) {
     var playerID = lobbyCount;
     var startingX = 75;
     var startingY = 275;
-    players[sessionID] = {
+    lobbyMembers[sessionID] = {
       id: sessionID,
       title: "player",
       team: -1,
@@ -164,17 +176,17 @@ io.on("connection", function(socket) {
       holdingDownSpaceCheck: false,
       spell: "analogRidge",
       recharge: false,
-      puck: new Puck(startingX, startingY)
+      puck: new Puck(startingX, startingY, system)
     };
-    socket.emit("playerRole", players[sessionID]);
-    createPlayerLoop(players[sessionID]);
+    socket.emit("playerRole", lobbyMembers[sessionID]);
+    createPlayerLoop(lobbyMembers[sessionID]);
     console.log(sessionID);
     lobbyCount++;
   });
   socket.on("playerJoin", function() {
-    var player = players[sessionID] || {};
+    var player = lobbyMembers[sessionID] || {};
     console.log("joining");
-    if (playerCount === 0) {
+    if (playerCount === 0 || maxPlayers === -1) {
       player1 = player;
       player1.playing = true;
       player1.team = 0;
@@ -185,40 +197,43 @@ io.on("connection", function(socket) {
       player1.puck.x = 200;
       player1.spawnX = 200;
       socket.emit("setTeam", 0);
+      players[0] = player1;
       playerCount++;
       //console.log("player1 has entered");
     }
-    if (playerCount === 1 && !player.playing) {
+    if (playerCount === 1 && !player.playing && maxPlayers === 2) {
       player2 = player;
       player2.playing = true;
-      player2.team = 0;
-      player2.x = 75;
-      player2.puck.x = 75;
-      player2.spawnX = 75;
-      player2.y = 300;
-      player2.puck.y = 300;
-      player2.spawnY = 300;
+      player2.team = 1;
+      player2.x = 925;
+      player2.puck.x = 925;
+      player2.spawnX = 925;
+      player2.y = 200;
+      player2.puck.y = 200;
+      player2.spawnY = 200;
 
-      socket.emit("setTeam", 0);
+      socket.emit("setTeam", 1);
+      players[1] = player2;
       playerCount++;
       console.log("player2 has entered");
     }
-    if (playerCount === 2 && !player.playing) {
+    if (playerCount === 2 && !player.playing && maxPlayers === 4) {
       player3 = player;
       player3.playing = true;
-      player3.team = 1;
-      player3.x = 925;
-      player3.puck.x = 925;
-      player3.spawnX = 925;
+      player3.team = 0;
+      player3.x = 75;
+      player3.puck.x = 75;
+      player3.spawnX = 75;
       player3.y = 200;
       player3.puck.y = 200;
       player3.spawnY = 200;
 
-      socket.emit("setTeam", 1);
+      socket.emit("setTeam", 0);
+      players[2] = player3;
       playerCount++;
       console.log("player2 has entered");
     }
-    if (playerCount === 3 && !player.playing) {
+    if (playerCount === 3 && !player.playing && maxPlayers === 4) {
       player4 = player;
       player4.playing = true;
       player4.team = 1;
@@ -230,42 +245,35 @@ io.on("connection", function(socket) {
       player4.spawnY = 300;
 
       socket.emit("setTeam", 1);
+      players[3] = player4;
       playerCount++;
       console.log("player2 has entered");
     }
   });
   socket.on("playerReady", function() {
-    var player = players[sessionID] || {};
+    var player = lobbyMembers[sessionID] || {};
     if (player.team !== -1) {
       player.ready = true;
     }
-    if (speedMode) {
+    if (maxPlayers === -1) {
       gameOn = true;
     }
-    if (
-      player1.ready &&
-      player2.ready &&
-      player3.ready &&
-      player4.ready &&
-      !gameOn
-    ) {
+    var allReady = true;
+    for (var id in players) {
+      var playerCheck = players[id];
+      if (playerCheck.ready === false) {
+        allReady = false;
+      }
+    }
+    if (Object.keys(players).length === maxPlayers && !gameOn && allReady) {
       timer = 3;
-      player1.x = player1.spawnX;
-      player1.y = player1.spawnY;
-      player2.x = player2.spawnX;
-      player2.y = player2.spawnY;
-      player3.x = player3.spawnX;
-      player3.y = player3.spawnY;
-      player4.x = player4.spawnX;
-      player4.y = player4.spawnY;
-      player1.puck.x = player1.spawnX;
-      player1.puck.y = player1.spawnY;
-      player2.puck.x = player2.spawnX;
-      player2.puck.y = player2.spawnY;
-      player3.puck.x = player3.spawnX;
-      player3.puck.y = player3.spawnY;
-      player4.puck.x = player4.spawnX;
-      player4.puck.y = player4.spawnY;
+      for (var id2 in players) {
+        var playerForLoad = players[id2];
+        playerForLoad.x = playerForLoad.spawnX;
+        playerForLoad.y = playerForLoad.spawnY;
+        playerForLoad.puck.x = playerForLoad.spawnX;
+        playerForLoad.puck.y = playerForLoad.spawnY;
+      }
 
       var countdown = setInterval(function() {
         timer--;
@@ -278,7 +286,7 @@ io.on("connection", function(socket) {
     }
   });
   socket.on("controllerMovement", function(input) {
-    var player = players[sessionID] || {};
+    var player = lobbyMembers[sessionID] || {};
     if (player.playing && gameOn) {
       //console.log(input.leftStick[0]);
       var puck = player.puck;
@@ -300,7 +308,7 @@ io.on("connection", function(socket) {
     }
   });
   socket.on("movement", function(data) {
-    var player = players[sessionID] || {};
+    var player = lobbyMembers[sessionID] || {};
     if (player.playing && gameOn) {
       var puck = player.puck;
       puck.aon = data.left;
@@ -324,7 +332,7 @@ io.on("connection", function(socket) {
   socket.on("controllerSpell", function(axes) {
     if (axes[0] * axes[0] + axes[1] * axes[1] > 0.7) {
       var radAngle = Math.atan2(-axes[1], -axes[0]);
-      var player = players[sessionID] || {};
+      var player = lobbyMembers[sessionID] || {};
       if (player.playing && gameOn) {
         if (player.recharge) {
           return;
@@ -348,7 +356,7 @@ io.on("connection", function(socket) {
     ) {
       return;
     }
-    var player = players[sessionID] || {};
+    var player = lobbyMembers[sessionID] || {};
     if (player.playing && gameOn) {
       if (player.recharge) {
         return;
@@ -450,14 +458,12 @@ function createPlayerLoop(player) {
     var puck = player.puck;
     if (puck.controllerEnabled) {
       puck.updatePositionC(timeDifference);
-    } else {
-      puck.updatePosition2(timeDifference);
     }
 
     var radAngle = Math.atan2(-puck.controllerX, -puck.controllerY);
     //var hypSize = puck.controllerX * puck.controllerX + puck.controllerY * puck.controllerY;
     //var angle = radAngle * (180 / Math.PI) + 180;
-    puck.checkRidgeCollisions(activeSpells);
+    //puck.checkRidgeCollisions(activeSpells);
     puck.checkAnalogRidgeCollisions2(activeAnalogSpells);
 
     player.x = puck.x;
@@ -494,7 +500,7 @@ setInterval(function() {
       continue;
     }
     if (win === -1) {
-      if (player.id === player1.id || player.id === player2.id) {
+      if (player.id === player1.id || player.id === player3.id) {
         if (
           Math.abs(player.x - flags[1].x) < 23 &&
           Math.abs(player.y - flags[1].y) < 23
@@ -511,7 +517,7 @@ setInterval(function() {
             win = 0;
           }
         }
-      } else if (player.id === player3.id || player.id === player4.id) {
+      } else if (player.id === player2.id || player.id === player4.id) {
         if (
           Math.abs(player.x - flags[0].x) < 23 &&
           Math.abs(player.y - flags[0].y) < 23
@@ -538,41 +544,46 @@ setInterval(function() {
   }*/
   //console.log(win);
 
+  if (maxPlayersNext !== maxPlayers && maxPlayers === -1) {
+    win = 0;
+  }
   if (win !== -1) {
     score[0] = 0;
     score[1] = 0;
     for (var id in players) {
       var player = players[id];
-      if (
-        player.id === player1.id ||
-        player.id === player2.id ||
-        player.id === player3.id ||
-        player.id === player4.id
-      ) {
-        player.playing = false;
-        player.team = -1;
-        player.flagging = false;
-        player.ready = false;
-        var puck = player.puck;
-        puck.xa = 0.0;
-        puck.ya = 0.0;
-        puck.aon = false;
-        puck.won = false;
-        puck.don = false;
-        puck.son = false;
-      }
+      player.playing = false;
+      player.team = -1;
+      player.flagging = false;
+      player.ready = false;
+      player.x = player.spawnX;
+      player.y = player.spawnY;
+      player.puck.y = player.spawnX;
+      player.puck.y = player.spawnY;
+      var puck = player.puck;
+      puck.xa = 0.0;
+      puck.ya = 0.0;
+      puck.aon = false;
+      puck.won = false;
+      puck.don = false;
+      puck.son = false;
     }
     flags[0].grabbed = false;
     flags[1].grabbed = false;
     player1 = {};
     player2 = {};
+    player3 = {};
+    player4 = {};
+    players = {};
     playerCount = 0;
     gameOn = false;
+    maxPlayers = maxPlayersNext;
     setTimeout(function() {
       win = -1;
     }, 3000);
   }
 
+  //console.log()
   io.sockets.emit(
     "state",
     players,
